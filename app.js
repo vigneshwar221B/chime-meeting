@@ -6,8 +6,10 @@ dotenv.config();
 
 const port = process.env.PORT || 3000;
 
+app.use(express.static(__dirname + "/static"));
+
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.sendFile(__dirname + "/public/index.html");
 });
 
 app.listen(port, () => {
