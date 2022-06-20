@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors")
 const { v4: uuid } = require("uuid");
 
 const dotenv = require("dotenv");
@@ -7,6 +8,7 @@ dotenv.config();
 const { chime, getClientForMeeting, log, S3_ARN } = require("./helper");
 
 const app = express();
+app.use(cors())
 app.use(express.static(__dirname + "/static"));
 
 const meetingTable = {};
