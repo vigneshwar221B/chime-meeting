@@ -1,4 +1,5 @@
 const AWS = require("aws-sdk");
+var dynamodb = new AWS.DynamoDB({ apiVersion: "2012-08-10" });
 
 const chime = new AWS.Chime({ region: "us-east-1" });
 chime.endpoint = new AWS.Endpoint("https://service.chime.aws.amazon.com");
@@ -27,4 +28,4 @@ const log = (message) => {
   console.log(message);
 };
 
-module.exports = { AWS, chime, sts, S3_ARN, getClientForMeeting, log };
+module.exports = { AWS, chime, sts, S3_ARN, getClientForMeeting,chimeSDKMeetings, log };

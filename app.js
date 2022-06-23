@@ -1,14 +1,20 @@
 const express = require("express");
-const cors = require("cors")
+const cors = require("cors");
 const { v4: uuid } = require("uuid");
 
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { chime, getClientForMeeting, log, S3_ARN } = require("./helper");
+const {
+  chime,
+  getClientForMeeting,
+  log,
+  S3_ARN,
+  chimeSDKMeetings,
+} = require("./helper");
 
 const app = express();
-app.use(cors())
+app.use(cors());
 app.use(express.static(__dirname + "/static"));
 
 const meetingTable = {};
@@ -39,6 +45,15 @@ app.post("/join", async (req, res) => {
       MediaRegion: req.query.region,
       ExternalMeetingId: req.query.title.substring(0, 64),
     };
+    if (req.query.ns_es === "true") {
+      client = chimeSDKMeetings;
+      request.MeetingFeatures = {
+        Audio: {
+          // The EchoReduction parameter helps the user enable and use Amazon Echo Reduction.
+          EchoReduction: "AVAILABLE",
+        },
+      };
+    }
     console.info("Creating new meeting: " + JSON.stringify(request));
     meeting = await client.createMeeting(request).promise();
     meetingTable[req.query.title] = meeting;
