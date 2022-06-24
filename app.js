@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { v4: uuid } = require("uuid");
+const jwt = require("jsonwebtoken");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -11,6 +12,7 @@ const {
   log,
   S3_ARN,
   chimeSDKMeetings,
+  JWT_SECRET,
   getAll,
   getItem,
   putItem,
@@ -100,11 +102,19 @@ app.post("/join", async (req, res) => {
     })
     .promise();
 
+  console.log(attendee.Attendee.AttendeeId);
+  const jwt_token = jwt.sign(
+    { attendeeId: attendee.Attendee.AttendeeId },
+    JWT_SECRET
+  );
+
   let response = {
     JoinInfo: {
       Meeting: mres,
       Attendee: attendee,
-    },
+      AttendeeId: attendee.Attendee.AttendeeId,
+      token: jwt_token
+    }
   };
 
   res.json(response);

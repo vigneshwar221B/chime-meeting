@@ -12,6 +12,7 @@ console.log(`S3 destination for capture is ${S3_ARN || "not set."}`);
 
 const chimeSDKMeetings = new AWS.ChimeSDKMeetings({ region: "us-east-1" });
 const useChimeSDKMeetings = process.env.USE_CHIME_SDK_MEETINGS || "true";
+const JWT_SECRET = process.env.JWT_SECRET || 'ssshhh!';
 
 const getClientForMeeting = (meeting) => {
   return useChimeSDKMeetings === "true" ||
@@ -82,6 +83,7 @@ module.exports = {
   chime,
   sts,
   S3_ARN,
+  JWT_SECRET,
   getClientForMeeting,
   chimeSDKMeetings,
   log,
