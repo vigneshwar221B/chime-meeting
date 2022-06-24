@@ -57,6 +57,9 @@ app.post("/join", async (req, res) => {
   let client = getClientForMeeting(meeting);
   console.log("before if");
   console.log(meeting);
+  let mId;
+  let mres;
+
   if (Object.keys(meeting).length === 0) {
     console.log("if true");
     let request = {
@@ -75,16 +78,21 @@ app.post("/join", async (req, res) => {
     }
     console.info("Creating new meeting: " + JSON.stringify(request));
     meeting = await client.createMeeting(request).promise();
+    mId = meeting.Meeting.MeetingId;
+    mres = meeting
 
     //meetingTable[req.query.title] = meeting;
     await putItem(req.query.title, meeting);
+  } else {
+    mId = meeting.Item.obj.Meeting.MeetingId;
+    mres = meeting.Item.obj;
   }
 
   console.log(meeting);
 
   const attendee = await client
     .createAttendee({
-      MeetingId: meeting.Meeting.MeetingId,
+      MeetingId: mId,
       ExternalUserId: `${uuid().substring(0, 8)}#${req.query.name}`.substring(
         0,
         64
@@ -94,7 +102,7 @@ app.post("/join", async (req, res) => {
 
   let response = {
     JoinInfo: {
-      Meeting: meeting,
+      Meeting: mres,
       Attendee: attendee,
     },
   };
