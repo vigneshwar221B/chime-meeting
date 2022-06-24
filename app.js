@@ -11,6 +11,11 @@ const {
   log,
   S3_ARN,
   chimeSDKMeetings,
+  getAll,
+  getItem,
+  putItem,
+  deleteItem,
+  deleteAll,
 } = require("./helper");
 
 const app = express();
@@ -20,9 +25,20 @@ app.use(express.static(__dirname + "/static"));
 const meetingTable = {};
 
 //for development purposes
-app.get("/get-all-meetings", (req, res) => {
-  log(meetingTable);
-  res.json(meetingTable);
+app.get("/get-all-meetings", async (req, res) => {
+  const meetings = await getItem("m1");
+  log(meetings);
+  res.json(meetings);
+});
+
+app.post("/delete-all", async (req, res) => {
+  const data = await deleteAll();
+  res.json(data);
+});
+
+app.post("/delete", async (req, res) => {
+  const data = await deleteItem(req.query.title);
+  res.json(data);
 });
 
 //end points
@@ -30,16 +46,19 @@ app.post("/join", async (req, res) => {
   log(req.query);
 
   if (!req.query.title || !req.query.name || !req.query.region) {
-    res.status(400).send("need query params: title, name, and region");
+    return res.status(400).send("need query params: title, name, and region");
   }
 
-  const meetingIdFormat =
-    /^[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}$/;
-  let meeting = meetingTable[req.query.title];
+  // const meetingIdFormat =
+  //   /^[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}$/;
+  //let meeting = meetingTable[req.query.title];
+  let meeting = await getItem(req.query.title);
 
   let client = getClientForMeeting(meeting);
-
-  if (!meeting) {
+  console.log("before if");
+  console.log(meeting);
+  if (Object.keys(meeting).length === 0) {
+    console.log("if true");
     let request = {
       ClientRequestToken: uuid(),
       MediaRegion: req.query.region,
@@ -56,8 +75,12 @@ app.post("/join", async (req, res) => {
     }
     console.info("Creating new meeting: " + JSON.stringify(request));
     meeting = await client.createMeeting(request).promise();
-    meetingTable[req.query.title] = meeting;
+
+    //meetingTable[req.query.title] = meeting;
+    await putItem(req.query.title, meeting);
   }
+
+  console.log(meeting);
 
   const attendee = await client
     .createAttendee({
@@ -77,16 +100,19 @@ app.post("/join", async (req, res) => {
   };
 
   res.json(response);
+  //res.json({});
 });
 
 app.post("/end", async (req, res) => {
-  let client = getClientForMeeting(meetingTable[req.query.title]);
+  let item = await getItem(req.query.title);
+  let client = getClientForMeeting(item);
 
   await client
     .deleteMeeting({
-      MeetingId: meetingTable[req.query.title].Meeting.MeetingId,
+      MeetingId: item.Item.obj.Meeting.MeetingId,
     })
     .promise();
+  await deleteItem(req.query.title);
   res.send(`meeting ${req.query.title} has been ended`);
 });
 
@@ -94,12 +120,13 @@ app.post("/remove-attendee", async (req, res) => {
   if (!req.query.title || !req.query.attendeeId) {
     res.status(400).send("need params: title and attendeeId");
   }
-  let client = getClientForMeeting(meetingTable[req.query.title]);
-  const meeting = meetingTable[req.query.title];
+  const meetingItem = await getItem(req.query.title);
+  let client = getClientForMeeting(meetingItem.Item.obj);
+  //const meeting = meetingTable[req.query.title];
 
   await client
     .deleteAttendee({
-      MeetingId: meeting.Meeting.MeetingId,
+      MeetingId: meetingItem.Item.obj.Meeting.MeetingId,
       AttendeeId: req.query.attendeeId,
     })
     .promise();

@@ -1,5 +1,6 @@
 const AWS = require("aws-sdk");
-var dynamodb = new AWS.DynamoDB({ apiVersion: "2012-08-10" });
+const db = new AWS.DynamoDB({ apiVersion: "2012-08-10" });
+const dbClient = new AWS.DynamoDB.DocumentClient({ region: "us-east-1" });
 
 const chime = new AWS.Chime({ region: "us-east-1" });
 chime.endpoint = new AWS.Endpoint("https://service.chime.aws.amazon.com");
@@ -28,4 +29,65 @@ const log = (message) => {
   console.log(message);
 };
 
-module.exports = { AWS, chime, sts, S3_ARN, getClientForMeeting,chimeSDKMeetings, log };
+//db functions
+const getAll = async () => {
+  const params = {
+    TableName: "test-table",
+  };
+
+  const data = await dbClient.scan(params).promise();
+  return data;
+};
+
+const getItem = async (Id) => {
+  const params = {
+    TableName: "test-table",
+    Key: { Id },
+  };
+
+  const data = await dbClient.get(params).promise();
+  return data;
+};
+
+const putItem = async (Id, putData) => {
+  const params = {
+    TableName: "test-table",
+    Item: { Id, obj: putData },
+  };
+
+  const data = await dbClient.put(params).promise();
+  return data;
+};
+
+const deleteItem = async (Id) => {
+  const params = {
+    TableName: "test-table",
+    Key: { Id },
+  };
+
+  const data = await dbClient.delete(params).promise();
+  return data;
+};
+
+const deleteAll = async () => {
+  const records = await getAll();
+  records.Items.forEach(async (item) => {
+    await deleteItem(item.Id);
+  });
+  return "deleted all items";
+};
+
+module.exports = {
+  AWS,
+  chime,
+  sts,
+  S3_ARN,
+  getClientForMeeting,
+  chimeSDKMeetings,
+  log,
+  getAll,
+  getItem,
+  putItem,
+  deleteItem,
+  deleteAll,
+};
