@@ -50,10 +50,10 @@ const getItem = async (Id) => {
   return data;
 };
 
-const putItem = async (Id, putData) => {
+const putItem = async (Id, putData, aId) => {
   const params = {
     TableName: "test-table",
-    Item: { Id, obj: putData },
+    Item: { Id, obj: putData, byAttendeeId: aId },
   };
 
   const data = await dbClient.put(params).promise();

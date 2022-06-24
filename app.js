@@ -59,10 +59,15 @@ app.post("/join", async (req, res) => {
   let client = getClientForMeeting(meeting);
   console.log("before if");
   console.log(meeting);
+
   let mId;
   let mres;
+  let token = null;
+  let aId = null;
+  let newMeeting = false;
 
   if (Object.keys(meeting).length === 0) {
+    newMeeting = true;
     console.log("if true");
     let request = {
       ClientRequestToken: uuid(),
@@ -80,17 +85,13 @@ app.post("/join", async (req, res) => {
     }
     console.info("Creating new meeting: " + JSON.stringify(request));
     meeting = await client.createMeeting(request).promise();
-    mId = meeting.Meeting.MeetingId;
-    mres = meeting
 
-    //meetingTable[req.query.title] = meeting;
-    await putItem(req.query.title, meeting);
+    mId = meeting.Meeting.MeetingId;
+    mres = meeting;
   } else {
     mId = meeting.Item.obj.Meeting.MeetingId;
     mres = meeting.Item.obj;
   }
-
-  console.log(meeting);
 
   const attendee = await client
     .createAttendee({
@@ -102,23 +103,24 @@ app.post("/join", async (req, res) => {
     })
     .promise();
 
-  console.log(attendee.Attendee.AttendeeId);
-  const jwt_token = jwt.sign(
-    { attendeeId: attendee.Attendee.AttendeeId },
-    JWT_SECRET
-  );
+   if (newMeeting) {
+     await putItem(req.query.title, meeting, attendee.Attendee.AttendeeId);
+   }
+
+  meeting = await getItem(req.query.title);
+  token = jwt.sign({ byAttendeeId: attendee.Attendee.AttendeeId }, JWT_SECRET);
 
   let response = {
     JoinInfo: {
       Meeting: mres,
       Attendee: attendee,
-      AttendeeId: attendee.Attendee.AttendeeId,
-      token: jwt_token
-    }
+      byAttendeeId: meeting.Item.byAttendeeId,
+      token,
+    },
   };
 
-  res.json(response);
-  //res.json({});
+   res.json(response);
+ // res.json(meeting);
 });
 
 app.post("/end", async (req, res) => {
