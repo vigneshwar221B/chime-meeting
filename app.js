@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { v4: uuid } = require("uuid");
+const jwt = require("jsonwebtoken");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -11,6 +12,7 @@ const {
   log,
   S3_ARN,
   chimeSDKMeetings,
+  JWT_SECRET,
   getAll,
   getItem,
   putItem,
@@ -57,7 +59,15 @@ app.post("/join", async (req, res) => {
   let client = getClientForMeeting(meeting);
   console.log("before if");
   console.log(meeting);
+
+  let mId;
+  let mres;
+  let token = null;
+  let aId = null;
+  let newMeeting = false;
+
   if (Object.keys(meeting).length === 0) {
+    newMeeting = true;
     console.log("if true");
     let request = {
       ClientRequestToken: uuid(),
@@ -76,15 +86,16 @@ app.post("/join", async (req, res) => {
     console.info("Creating new meeting: " + JSON.stringify(request));
     meeting = await client.createMeeting(request).promise();
 
-    //meetingTable[req.query.title] = meeting;
-    await putItem(req.query.title, meeting);
+    mId = meeting.Meeting.MeetingId;
+    mres = meeting;
+  } else {
+    mId = meeting.Item.obj.Meeting.MeetingId;
+    mres = meeting.Item.obj;
   }
-
-  console.log(meeting);
 
   const attendee = await client
     .createAttendee({
-      MeetingId: meeting.Meeting.MeetingId,
+      MeetingId: mId,
       ExternalUserId: `${uuid().substring(0, 8)}#${req.query.name}`.substring(
         0,
         64
@@ -92,15 +103,24 @@ app.post("/join", async (req, res) => {
     })
     .promise();
 
+   if (newMeeting) {
+     await putItem(req.query.title, meeting, attendee.Attendee.AttendeeId);
+   }
+
+  meeting = await getItem(req.query.title);
+  token = jwt.sign({ byAttendeeId: attendee.Attendee.AttendeeId }, JWT_SECRET);
+
   let response = {
     JoinInfo: {
-      Meeting: meeting,
+      Meeting: mres,
       Attendee: attendee,
+      byAttendeeId: meeting.Item.byAttendeeId,
+      token,
     },
   };
 
-  res.json(response);
-  //res.json({});
+   res.json(response);
+ // res.json(meeting);
 });
 
 app.post("/end", async (req, res) => {
