@@ -26,7 +26,7 @@ const meetingTable = {};
 
 //for development purposes
 app.get("/get-all-meetings", async (req, res) => {
-  const meetings = await getItem("m1");
+  const meetings = await getAll();
   log(meetings);
   res.json(meetings);
 });
