@@ -103,9 +103,9 @@ app.post("/join", async (req, res) => {
     })
     .promise();
 
-   if (newMeeting) {
-     await putItem(req.query.title, meeting, attendee.Attendee.AttendeeId);
-   }
+  if (newMeeting) {
+    await putItem(req.query.title, meeting, attendee.Attendee.AttendeeId);
+  }
 
   meeting = await getItem(req.query.title);
   token = jwt.sign({ byAttendeeId: attendee.Attendee.AttendeeId }, JWT_SECRET);
@@ -119,21 +119,46 @@ app.post("/join", async (req, res) => {
     },
   };
 
-   res.json(response);
- // res.json(meeting);
+  res.json(response);
+  // res.json(meeting);
 });
 
 app.post("/end", async (req, res) => {
-  let item = await getItem(req.query.title);
+  let item = await getItem(req.query.meet);
   let client = getClientForMeeting(item);
 
-  await client
-    .deleteMeeting({
-      MeetingId: item.Item.obj.Meeting.MeetingId,
-    })
-    .promise();
-  await deleteItem(req.query.title);
-  res.send(`meeting ${req.query.title} has been ended`);
+  let decoded = jwt.verify(req.headers.token, JWT_SECRET);
+  console.log(decoded);
+  let createdBy = decoded?.byAttendeeId;
+
+  let meeting = await getItem(req.query.meet);
+  console.log(meeting);
+
+  if (createdBy == meeting.Item.byAttendeeId) {
+    console.log("auth is granted");
+    console.log(meeting);
+    await client
+      .deleteMeeting({
+        MeetingId: meeting.Item.obj.Meeting.MeetingId,
+      })
+     .promise();
+    await deleteItem(req.query.meet);
+    //return res.json(meeting.Item.obj.Meeting.MeetingId);
+    return res.send(`meeting ${req.query.meet} has been ended`);
+  } else {
+    console.log("auth is not granted");
+    return res.status(401).send(
+      `You dont have the perms to end the meeting ${req.query.meet}`
+    );
+  }
+
+  // await client
+  //   .deleteMeeting({
+  //     MeetingId: item.Item.obj.Meeting.MeetingId,
+  //   })
+  //   .promise();
+  // await deleteItem(req.query.title);
+  res.send(`meeting ${req.query.meet} has been ended`);
 });
 
 app.post("/remove-attendee", async (req, res) => {
